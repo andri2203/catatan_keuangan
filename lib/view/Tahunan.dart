@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 class Tahunan extends StatefulWidget {
+  final int bulanan;
+  final int tahunan;
+
+  Tahunan(this.bulanan, this.tahunan);
   @override
   _TahunanState createState() => _TahunanState();
 }

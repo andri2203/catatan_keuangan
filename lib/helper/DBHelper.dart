@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io' as io;
 
+import 'package:keuangan/model/Tanggal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:keuangan/model/Users.dart';
+import 'package:keuangan/model/Detail.dart';
 
 class DBHelper {
   static final DBHelper _instance = new DBHelper.internal();
@@ -32,7 +34,10 @@ class DBHelper {
         "CREATE TABLE users(id INTEGER PRIMARY KEY, nama TEXT, pin TEXT)");
     print("Table users created");
     await db.execute(
-        "CREATE TABLE detail(id_detail INTEGER PRIMARY KEY, tanggal TEXT, kategori TEXT, jumlah INTEGER, keterangan TEXT, status TEXT)");
+        "CREATE TABLE tanggal(id_tanggal INTEGER PRIMARY KEY, id_user INTEGER, tanggal INTEGER, bulan INTEGER, tahun INTEGER)");
+    print("Table tanggal created");
+    await db.execute(
+        "CREATE TABLE detail(id_detail INTEGER PRIMARY KEY, id_user INTEGER, id_tanggal INTEGER, kategori TEXT, jumlah INTEGER, keterangan TEXT, kode INTEGER)");
     print("Table detail created");
   }
 
@@ -47,6 +52,38 @@ class DBHelper {
     var dbClient = await db;
     List<Map> res =
         await dbClient.rawQuery("SELECT * FROM users WHERE pin = " + pin);
+    return res;
+  }
+
+  Future<int> saveDetail(Detail detail) async {
+    var dbClient = await db;
+
+    int res = await dbClient.insert("detail", detail.toMap());
+    print("Detail Inserted");
+    return res;
+  }
+
+  Future<int> saveTanggal(Tanggal tanggal) async {
+    var dbClient = await db;
+
+    int tRes = await dbClient.insert("tanggal", tanggal.toMap());
+    print("Detail Inserted");
+    return tRes;
+  }
+
+  Future<List<Map>> checkTanggal(int tanggal) async {
+    var dbClient = await db;
+
+    var data = await dbClient.rawQuery(
+      "SELECT * FROM tanggal WHERE tanggal = " + tanggal.toString(),
+    );
+
+    return data;  
+  }
+
+  Future<List<Map>> select(String sql) async {
+    var dbClient = await db;
+    List<Map> res = await dbClient.rawQuery(sql);
     return res;
   }
 }

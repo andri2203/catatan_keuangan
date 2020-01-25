@@ -1,5 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:keuangan/helper/DBHelper.dart';
 import 'package:keuangan/model/Users.dart';
+import 'package:keuangan/view/InputData.dart';
+import 'package:intl/intl.dart';
+import 'package:indonesia/indonesia.dart';
+
 import './view/Harian.dart' as hari;
 import './view/Mingguan.dart' as minggu;
 import './view/Bulanan.dart' as bulan;
@@ -22,6 +29,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   var date = DateTime.now();
   int bulanan;
   int tahunan;
+  List<Map> _data = new List();
+  int pemasukan = 0;
+  int pengeluaran = 0;
 
   @override
   void initState() {
@@ -37,58 +47,34 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
       ..addListener(() {
         setState(() {});
       });
+
+    this.fetchData();
   }
 
-  String _dayName(int dayWeek) {
-    String day;
+  List<Map> get data => _data;
+  Future fetchData() async {
+    var db = DBHelper();
 
-    if (dayWeek == DateTime.monday) {
-      day = "Senin";
-    } else if (dayWeek == DateTime.tuesday) {
-      day = "Selasa";
-    } else if (dayWeek == DateTime.wednesday) {
-      day = "Rabu";
-    } else if (dayWeek == DateTime.thursday) {
-      day = "Kamis";
-    } else if (dayWeek == DateTime.friday) {
-      day = "Jum'at";
-    } else if (dayWeek == DateTime.saturday) {
-      day = "Sabtu";
-    } else if (dayWeek == DateTime.sunday) {
-      day = "Minggu";
+    List<Map> listData = await db
+        .select("SELECT * FROM detail WHERE id_user = ${widget.user.pin}");
+
+    for (var i = 0; i < listData.length; i++) {
+      setState(() {
+        _data.add(listData[i]);
+      });
+
+      if (listData[i]['kode'] == 1) {
+        setState(() {
+          pemasukan += listData[i]['jumlah'];
+        });
+      } else if (listData[i]['kode'] == 2) {
+        setState(() {
+          pengeluaran += listData[i]['jumlah'];
+        });
+      }
     }
 
-    return day;
-  }
-
-  String _monthName() {
-    String month;
-
-    if (bulanan == DateTime.january)
-      month = "Jan";
-    else if (bulanan == DateTime.february)
-      month = "Feb";
-    else if (bulanan == DateTime.march)
-      month = "Mar";
-    else if (bulanan == DateTime.april)
-      month = "Apr";
-    else if (bulanan == DateTime.may)
-      month = "Mei";
-    else if (bulanan == DateTime.june)
-      month = "Jun";
-    else if (bulanan == DateTime.july)
-      month = "Jul";
-    else if (bulanan == DateTime.august)
-      month = "Aug";
-    else if (bulanan == DateTime.september)
-      month = "Sep";
-    else if (bulanan == DateTime.october)
-      month = "Okt";
-    else if (bulanan == DateTime.november)
-      month = "Nov";
-    else if (bulanan == DateTime.december) month = "Des";
-
-    return month;
+    return _data;
   }
 
   @override
@@ -114,37 +100,37 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
             ],
           ),
           actions: <Widget>[
-            _buttonCal(),
+            _buttonCal(context),
           ],
         ),
-        drawer: drawer(),
+        drawer: drawer(context),
         body: Container(
           color: Colors.grey[100],
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
-              status(),
+              status(context),
               Expanded(
                 child: new TabBarView(
                   controller: tabController,
                   children: <Widget>[
-                    new hari.Harian(),
-                    new minggu.Mingguan(),
-                    new bulan.Bulanan(),
-                    new tahun.Tahunan(),
+                    new hari.Harian(bulanan, tahunan, widget.user),
+                    new minggu.Mingguan(bulanan, tahunan),
+                    new bulan.Bulanan(bulanan, tahunan),
+                    new tahun.Tahunan(bulanan, tahunan),
                   ],
                 ),
               )
             ],
           ),
         ),
-        floatingActionButton: floatAnimateButton(),
+        floatingActionButton: floatAnimateButton(context),
       ),
     );
   }
 
-  Widget floatAnimateButton() {
+  Widget floatAnimateButton(BuildContext context) {
     return Stack(
       alignment: Alignment.bottomRight,
       children: <Widget>[
@@ -155,7 +141,14 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
             elevation: _elevation,
             child: Icon(Icons.file_upload),
             backgroundColor: Colors.green,
-            onPressed: () {},
+            onPressed: () {
+              setState(() {
+                _elevation = 0.0;
+                currentState = true;
+              });
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => InputData("Pemasukan", 1, widget.user)));
+            },
           ),
         ),
         Positioned(
@@ -165,7 +158,15 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
             elevation: _elevation,
             child: Icon(Icons.file_download),
             backgroundColor: Colors.red,
-            onPressed: () {},
+            onPressed: () {
+              animationCon.reverse();
+              setState(() {
+                _elevation = 0.0;
+                currentState = true;
+              });
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => InputData("Pengeluaran", 2, widget.user)));
+            },
           ),
         ),
         Positioned(
@@ -195,9 +196,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     );
   }
 
-  Widget status() {
+  Widget status(BuildContext context) {
     return new Padding(
-      padding: EdgeInsets.only(bottom: 5.0),
+      padding: EdgeInsets.only(bottom: 8.0),
       child: new Material(
         elevation: 5,
         color: Colors.white,
@@ -209,7 +210,8 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                 children: <Widget>[
                   Text("Pemasukan", style: TextStyle(color: Colors.black)),
                   SizedBox(height: 5.0),
-                  Text("0,00", style: TextStyle(color: Colors.green))
+                  Text(rupiah(pemasukan, trailing: ',00'),
+                      style: TextStyle(color: Colors.green, fontSize: 10))
                 ],
               ),
               onPressed: () {},
@@ -219,7 +221,8 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                 children: <Widget>[
                   Text("Pengeluaran", style: TextStyle(color: Colors.black)),
                   SizedBox(height: 5.0),
-                  Text("0,00", style: TextStyle(color: Colors.red))
+                  Text(rupiah(pengeluaran, trailing: ',00'),
+                      style: TextStyle(color: Colors.red, fontSize: 10))
                 ],
               ),
               onPressed: () {},
@@ -229,7 +232,8 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                 children: <Widget>[
                   Text("Saldo", style: TextStyle(color: Colors.black)),
                   SizedBox(height: 5.0),
-                  Text("0,00", style: TextStyle(color: Colors.black)),
+                  Text(rupiah(pemasukan - pengeluaran, trailing: ',00'),
+                      style: TextStyle(color: Colors.black, fontSize: 10)),
                 ],
               ),
               onPressed: () {},
@@ -240,7 +244,11 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     );
   }
 
-  Widget drawer() {
+  Widget drawer(BuildContext context) {
+    DateFormat format = DateFormat(
+      "EEEE, dd MMM yyyy",
+      Localizations.localeOf(context).languageCode,
+    );
     return Drawer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -250,15 +258,19 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
               color: Colors.blue,
             ),
             accountName: Text(widget.user.nama),
-            accountEmail: Text(
-                "${_dayName(date.weekday)}, ${date.day}/${date.month}/${date.year}"),
+            accountEmail: Text(format.format(date.toLocal())),
           ),
         ],
       ),
     );
   }
 
-  Widget _buttonCal() {
+  Widget _buttonCal(BuildContext context) {
+    DateFormat format = DateFormat(
+      "MMM yyyy",
+      Localizations.localeOf(context).languageCode,
+    );
+
     return new Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
@@ -275,7 +287,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
             });
           },
         ),
-        Text("${_monthName()} $tahunan"),
+        Text(format.format(new DateTime(tahunan, bulanan, date.day))),
         IconButton(
           icon: Icon(Icons.arrow_forward_ios),
           onPressed: () {
