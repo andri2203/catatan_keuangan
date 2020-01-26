@@ -1,7 +1,5 @@
-import 'dart:async';
-
-import 'package:flutter/material.dart';
 import 'package:keuangan/helper/DBHelper.dart';
+import 'package:flutter/material.dart';
 import 'package:keuangan/model/Users.dart';
 import 'package:keuangan/view/InputData.dart';
 import 'package:intl/intl.dart';
@@ -29,9 +27,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   var date = DateTime.now();
   int bulanan;
   int tahunan;
-  List<Map> _data = new List();
   int pemasukan = 0;
   int pengeluaran = 0;
+  ScrollController _controller;
 
   @override
   void initState() {
@@ -39,6 +37,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
       bulanan = date.month;
       tahunan = date.year;
     });
+    _controller = new ScrollController();
     tabController = new TabController(vsync: this, length: 4);
     super.initState();
     animationCon = new AnimationController(
@@ -47,34 +46,16 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
       ..addListener(() {
         setState(() {});
       });
-
-    this.fetchData();
   }
 
-  List<Map> get data => _data;
-  Future fetchData() async {
+  Future<List> data() async {
     var db = DBHelper();
 
-    List<Map> listData = await db
-        .select("SELECT * FROM detail WHERE id_user = ${widget.user.pin}");
-
-    for (var i = 0; i < listData.length; i++) {
-      setState(() {
-        _data.add(listData[i]);
-      });
-
-      if (listData[i]['kode'] == 1) {
-        setState(() {
-          pemasukan += listData[i]['jumlah'];
-        });
-      } else if (listData[i]['kode'] == 2) {
-        setState(() {
-          pengeluaran += listData[i]['jumlah'];
-        });
-      }
-    }
-
-    return _data;
+    List<Map> _data = await db.select(
+        "SELECT SUM(jumlah) AS debit FROM detail WHERE id_user = ${widget.user.pin} AND kode = 1");
+    List<Map> _data1 = await db.select(
+        "SELECT SUM(jumlah) AS kredit FROM detail WHERE id_user = ${widget.user.pin} AND kode = 2");
+    return [_data, _data1];
   }
 
   @override
@@ -112,14 +93,17 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
             children: <Widget>[
               status(context),
               Expanded(
-                child: new TabBarView(
-                  controller: tabController,
-                  children: <Widget>[
-                    new hari.Harian(bulanan, tahunan, widget.user),
-                    new minggu.Mingguan(bulanan, tahunan),
-                    new bulan.Bulanan(bulanan, tahunan),
-                    new tahun.Tahunan(bulanan, tahunan),
-                  ],
+                child: Scrollbar(
+                  controller: _controller,
+                  child: new TabBarView(
+                    controller: tabController,
+                    children: <Widget>[
+                      new hari.Harian(bulanan, tahunan, widget.user),
+                      new minggu.Mingguan(bulanan, tahunan, widget.user),
+                      new bulan.Bulanan(bulanan, tahunan, widget.user),
+                      new tahun.Tahunan(bulanan, tahunan, widget.user),
+                    ],
+                  ),
                 ),
               )
             ],
@@ -199,47 +183,56 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   Widget status(BuildContext context) {
     return new Padding(
       padding: EdgeInsets.only(bottom: 8.0),
-      child: new Material(
-        elevation: 5,
-        color: Colors.white,
-        child: ButtonBar(
-          alignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
-            new FlatButton(
-              child: Column(
-                children: <Widget>[
-                  Text("Pemasukan", style: TextStyle(color: Colors.black)),
-                  SizedBox(height: 5.0),
-                  Text(rupiah(pemasukan, trailing: ',00'),
-                      style: TextStyle(color: Colors.green, fontSize: 10))
-                ],
-              ),
-              onPressed: () {},
+      child: FutureBuilder(
+        future: data(),
+        builder: (ctx, snap) {
+          if (!snap.hasData) return statusNull(context);
+          var debit = snap.data[0][0]['debit'];
+          var kredit = snap.data[1][0]['kredit'];
+          return new Material(
+            elevation: 5,
+            color: Colors.white,
+            child: ButtonBar(
+              alignment: MainAxisAlignment.spaceAround,
+              children: <Widget>[
+                new FlatButton(
+                  child: Column(
+                    children: <Widget>[
+                      Text("Pemasukan", style: TextStyle(color: Colors.black)),
+                      SizedBox(height: 5.0),
+                      Text(rupiah(debit, trailing: ',00'),
+                          style: TextStyle(color: Colors.green, fontSize: 10))
+                    ],
+                  ),
+                  onPressed: () {},
+                ),
+                new FlatButton(
+                  child: Column(
+                    children: <Widget>[
+                      Text("Pengeluaran",
+                          style: TextStyle(color: Colors.black)),
+                      SizedBox(height: 5.0),
+                      Text(rupiah(kredit, trailing: ',00'),
+                          style: TextStyle(color: Colors.red, fontSize: 10))
+                    ],
+                  ),
+                  onPressed: () {},
+                ),
+                new FlatButton(
+                  child: Column(
+                    children: <Widget>[
+                      Text("Saldo", style: TextStyle(color: Colors.black)),
+                      SizedBox(height: 5.0),
+                      Text(rupiah(debit - kredit, trailing: ',00'),
+                          style: TextStyle(color: Colors.black, fontSize: 10)),
+                    ],
+                  ),
+                  onPressed: () {},
+                ),
+              ],
             ),
-            new FlatButton(
-              child: Column(
-                children: <Widget>[
-                  Text("Pengeluaran", style: TextStyle(color: Colors.black)),
-                  SizedBox(height: 5.0),
-                  Text(rupiah(pengeluaran, trailing: ',00'),
-                      style: TextStyle(color: Colors.red, fontSize: 10))
-                ],
-              ),
-              onPressed: () {},
-            ),
-            new FlatButton(
-              child: Column(
-                children: <Widget>[
-                  Text("Saldo", style: TextStyle(color: Colors.black)),
-                  SizedBox(height: 5.0),
-                  Text(rupiah(pemasukan - pengeluaran, trailing: ',00'),
-                      style: TextStyle(color: Colors.black, fontSize: 10)),
-                ],
-              ),
-              onPressed: () {},
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -304,4 +297,51 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
       ],
     );
   }
+}
+
+Widget statusNull(BuildContext context) {
+  int debit = 0;
+  int kredit = 0;
+  return Material(
+    elevation: 5,
+    color: Colors.white,
+    child: ButtonBar(
+      alignment: MainAxisAlignment.spaceAround,
+      children: <Widget>[
+        new FlatButton(
+          child: Column(
+            children: <Widget>[
+              Text("Pemasukan", style: TextStyle(color: Colors.black)),
+              SizedBox(height: 5.0),
+              Text(rupiah(debit, trailing: ',00'),
+                  style: TextStyle(color: Colors.green, fontSize: 10))
+            ],
+          ),
+          onPressed: () {},
+        ),
+        new FlatButton(
+          child: Column(
+            children: <Widget>[
+              Text("Pengeluaran", style: TextStyle(color: Colors.black)),
+              SizedBox(height: 5.0),
+              Text(rupiah(kredit, trailing: ',00'),
+                  style: TextStyle(color: Colors.red, fontSize: 10))
+            ],
+          ),
+          onPressed: () {},
+        ),
+        new FlatButton(
+          child: Column(
+            children: <Widget>[
+              Text("Saldo", style: TextStyle(color: Colors.black)),
+              SizedBox(height: 5.0),
+              Text(rupiah(debit - kredit, trailing: ',00'),
+                  style: TextStyle(color: Colors.black, fontSize: 10)),
+            ],
+          ),
+          onPressed: () {},
+        ),
+      ],
+    ),
+  );
 }

@@ -71,14 +71,14 @@ class DBHelper {
     return tRes;
   }
 
-  Future<List<Map>> checkTanggal(int tanggal) async {
+  Future<List<Map>> checkTanggal(DateTime date) async {
     var dbClient = await db;
 
     var data = await dbClient.rawQuery(
-      "SELECT * FROM tanggal WHERE tanggal = " + tanggal.toString(),
+      "SELECT * FROM tanggal WHERE tanggal = ${date.day} AND bulan = ${date.month} AND tahun = ${date.year}",
     );
 
-    return data;  
+    return data;
   }
 
   Future<List<Map>> select(String sql) async {

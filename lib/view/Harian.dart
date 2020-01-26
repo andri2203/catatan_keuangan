@@ -43,6 +43,18 @@ class _HarianState extends State<Harian> {
     return list;
   }
 
+  Future<List> fetchStatus(int idTanggal) async {
+    var db = DBHelper();
+
+    List<Map> debit = await db.select(
+        "SELECT SUM(jumlah) AS pemasukan FROM detail WHERE id_user = ${widget.data.pin} AND id_tanggal = $idTanggal AND kode = 1");
+
+    List<Map> kredit = await db.select(
+        "SELECT SUM(jumlah) AS pengeluaran FROM detail WHERE id_user = ${widget.data.pin} AND id_tanggal = $idTanggal AND kode = 2");
+
+    return [debit, kredit];
+  }
+
   int daysInMonth(DateTime date) {
     var firstDayThisMonth =
         new DateTime(widget.tahunan, widget.bulanan, date.day);
@@ -67,6 +79,7 @@ class _HarianState extends State<Harian> {
               return Center(child: Text("Data Tida Ditemukan"));
 
             return ListView.builder(
+              physics: BouncingScrollPhysics(),
               itemCount: snap.data.length,
               itemBuilder: (context, i) {
                 Map<String, dynamic> data = snap.data[i];
@@ -104,13 +117,13 @@ class _HarianState extends State<Harian> {
         ),
         child: Column(
           children: <Widget>[
-            header(context, tgl),
+            header(context, tgl, data),
             Padding(
               padding: EdgeInsets.only(bottom: 8.0),
               child: Divider(),
             ),
-            StreamBuilder(
-              stream: this.fetchDetail(data['id_tanggal']).asStream(),
+            FutureBuilder(
+              future: this.fetchDetail(data['id_tanggal']),
               builder: (ctx, snap) {
                 if (!snap.hasData) return Text("Data Tidak Ada");
                 return ListView.builder(
@@ -154,33 +167,44 @@ class _HarianState extends State<Harian> {
     );
   }
 
-  Widget header(BuildContext context, DateTime tgl) {
-    int pemasukan = 0;
-    int pengeluaran = 0;
+  Widget header(BuildContext context, DateTime tgl, Map<String, dynamic> data) {
     Color tColor =
         (tgl.year == now.year && tgl.month == now.month && tgl.day == now.day)
             ? Colors.yellow[600]
             : Colors.black;
 
-    return ListTile(
-      leading: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Text(format("EEEE", tgl),
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          Padding(
-            padding: EdgeInsets.only(bottom: 5.0),
+    return FutureBuilder(
+      future: this.fetchStatus(data['id_tanggal']),
+      builder: (ctx, snap) {
+        if (!snap.hasData) Text("");
+        List data = snap.data;
+        int pemasukan = data == null ? 0 : data[0][0]['pemasukan'];
+        int pengeluaran = data == null ? 0 : data[1][0]['pengeluaran'];
+        return ListTile(
+          leading: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(format("EEEE", tgl),
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Padding(
+                padding: EdgeInsets.only(bottom: 5.0),
+              ),
+              Text(format("dd MMM yyyy", tgl),
+                  style: TextStyle(
+                      fontSize: 10.0,
+                      fontWeight: FontWeight.bold,
+                      color: tColor)),
+            ],
           ),
-          Text(format("dd MMM yyyy", tgl),
-              style: TextStyle(
-                  fontSize: 10.0, fontWeight: FontWeight.bold, color: tColor)),
-        ],
-      ),
-      title: Text(rupiah(pemasukan, trailing: ',00'),
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.green, fontSize: 10)),
-      trailing: Text(rupiah(pengeluaran, trailing: ',00'),
-          style: TextStyle(color: Colors.red, fontSize: 10)),
+          title: Text(
+              rupiah(pemasukan == null ? 0 : pemasukan, trailing: ',00'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.green, fontSize: 10)),
+          trailing: Text(
+              rupiah(pengeluaran == null ? 0 : pengeluaran, trailing: ',00'),
+              style: TextStyle(color: Colors.red, fontSize: 10)),
+        );
+      },
     );
   }
 }

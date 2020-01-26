@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:keuangan/model/Users.dart';
 
 class Bulanan extends StatefulWidget {
   final int bulanan;
   final int tahunan;
+  final Users data;
 
-  Bulanan(this.bulanan, this.tahunan);
+  Bulanan(this.bulanan, this.tahunan, this.data);
   @override
   _BulananState createState() => _BulananState();
 }

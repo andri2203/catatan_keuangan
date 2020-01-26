@@ -51,18 +51,19 @@ class _InputDataState extends State<InputData> {
       date.month,
       date.year,
     );
-    List<Map> data = await db.checkTanggal(date.day);
-    int idTanggal =
-        data.length > 0 ? data[0]['id_tanggal'] : await db.saveTanggal(tanggal);
+    List<Map> data = await db.checkTanggal(date);
+    int idBaru = await db.saveTanggal(tanggal);
 
     var detail = Detail(
       int.parse(widget.users.pin),
-      idTanggal,
+      data.length > 0 ? data[0]['id_tanggal'] : idBaru,
       katControl.text,
       int.parse(jumControl.text),
       ketControl.text,
       widget.kode,
     );
+
+    print(detail.toMap());
 
     var qry = await db.saveDetail(detail);
 
