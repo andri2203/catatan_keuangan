@@ -93,7 +93,8 @@ class _MingguanState extends State<Mingguan> {
                     builder: (context, snapshot) {
                       var debit =
                           snapshot.data == null ? 0 : snapshot.data[0]['debit'];
-                      return Text(rupiah(debit, trailing: ",00"),
+                      return Text(
+                          rupiah(debit == null ? 0 : debit, trailing: ",00"),
                           style: TextStyle(color: Colors.green));
                     }),
                 trailing: FutureBuilder(
@@ -102,7 +103,8 @@ class _MingguanState extends State<Mingguan> {
                       var kredit = snapshot.data == null
                           ? 0
                           : snapshot.data[0]['kredit'];
-                      return Text(rupiah(kredit, trailing: ",00"),
+                      return Text(
+                          rupiah(kredit == null ? 0 : kredit, trailing: ",00"),
                           style: TextStyle(color: Colors.red));
                     }),
               ),
