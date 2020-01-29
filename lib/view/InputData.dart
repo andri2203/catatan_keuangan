@@ -46,17 +46,18 @@ class _InputDataState extends State<InputData> {
     var date = DateTime.parse(dateControl.text);
 
     var tanggal = Tanggal(
-      int.parse(widget.users.pin),
       date.day,
       date.month,
       date.year,
+      date.millisecondsSinceEpoch,
     );
     List<Map> data = await db.checkTanggal(date);
-    int idBaru = await db.saveTanggal(tanggal);
+    int id =
+        data.length > 0 ? data[0]['id_tanggal'] : await db.saveTanggal(tanggal);
 
     var detail = Detail(
       int.parse(widget.users.pin),
-      data.length > 0 ? data[0]['id_tanggal'] : idBaru,
+      id,
       katControl.text,
       int.parse(jumControl.text),
       ketControl.text,

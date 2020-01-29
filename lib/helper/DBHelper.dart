@@ -34,7 +34,7 @@ class DBHelper {
         "CREATE TABLE users(id INTEGER PRIMARY KEY, nama TEXT, pin TEXT)");
     print("Table users created");
     await db.execute(
-        "CREATE TABLE tanggal(id_tanggal INTEGER PRIMARY KEY, id_user INTEGER, tanggal INTEGER, bulan INTEGER, tahun INTEGER)");
+        "CREATE TABLE tanggal(id_tanggal INTEGER PRIMARY KEY, tanggal INTEGER, bulan INTEGER, tahun INTEGER, time INTEGER)");
     print("Table tanggal created");
     await db.execute(
         "CREATE TABLE detail(id_detail INTEGER PRIMARY KEY, id_user INTEGER, id_tanggal INTEGER, kategori TEXT, jumlah INTEGER, keterangan TEXT, kode INTEGER)");
@@ -77,6 +77,8 @@ class DBHelper {
     var data = await dbClient.rawQuery(
       "SELECT * FROM tanggal WHERE tanggal = ${date.day} AND bulan = ${date.month} AND tahun = ${date.year}",
     );
+
+    print(data);
 
     return data;
   }

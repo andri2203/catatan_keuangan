@@ -29,7 +29,7 @@ class _HarianState extends State<Harian> {
     var db = DBHelper();
 
     List<Map> listData = await db.select(
-        "SELECT * FROM tanggal WHERE id_user = ${widget.data.pin} AND bulan = ${widget.bulanan} AND tahun = ${widget.tahunan} ORDER BY tanggal DESC");
+        "SELECT tanggal.* FROM tanggal JOIN detail ON detail.id_tanggal = tanggal.id_tanggal WHERE detail.id_user = ${widget.data.pin} AND tanggal.bulan = ${widget.bulanan} AND tanggal.tahun = ${widget.tahunan} GROUP BY tanggal.id_tanggal ORDER BY tanggal DESC");
 
     return listData;
   }
@@ -79,7 +79,7 @@ class _HarianState extends State<Harian> {
               return Center(child: Text("Data Tida Ditemukan"));
 
             return ListView.builder(
-              physics: BouncingScrollPhysics(),
+              physics: ClampingScrollPhysics(),
               itemCount: snap.data.length,
               itemBuilder: (context, i) {
                 Map<String, dynamic> data = snap.data[i];
@@ -111,7 +111,7 @@ class _HarianState extends State<Harian> {
           color: Colors.white,
           border: Border(
               bottom: BorderSide(
-            color: Colors.black,
+            color: Colors.black54,
             style: BorderStyle.solid,
           )),
         ),
@@ -170,7 +170,7 @@ class _HarianState extends State<Harian> {
   Widget header(BuildContext context, DateTime tgl, Map<String, dynamic> data) {
     Color tColor =
         (tgl.year == now.year && tgl.month == now.month && tgl.day == now.day)
-            ? Colors.yellow[600]
+            ? Colors.blue
             : Colors.black;
 
     return FutureBuilder(

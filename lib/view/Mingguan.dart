@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:indonesia/indonesia.dart';
 import 'package:intl/intl.dart';
 import 'package:keuangan/helper/DBHelper.dart';
 import 'package:keuangan/model/Users.dart';
@@ -55,74 +56,92 @@ class _MingguanState extends State<Mingguan> {
 
     return Container(
       child: ListView.builder(
-        physics: BouncingScrollPhysics(),
         shrinkWrap: true,
         itemCount: 6,
         itemBuilder: (context, i) {
-          int index = 6;
           dayInMonth -= 7;
           DateTime date = weekInMonth(dayInMonth);
           DateTime first = date.subtract(new Duration(days: date.weekday));
           DateTime last = new DateTime(first.year, first.month, first.day + 6);
 
-          return ifWeekInYear(first, last)
-              ? Material(
-                  color: Colors.white,
-                  elevation: 5,
-                  child: ListTile(
-                    leading: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Text("Minggu ${index - i}",
-                            style: TextStyle(fontSize: 9, color: Colors.black)),
-                        Container(
-                          padding: EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.all(Radius.circular(5)),
-                            color: Colors.grey,
-                          ),
-                          child: Text(
-                            "${format.format(first)} ~ ${format.format(last)}",
-                            style: TextStyle(fontSize: 9, color: Colors.white),
-                          ),
-                        ),
-                      ],
+          if (ifWeekInYear(first, last)) {
+            return Material(
+              color: Colors.white,
+              elevation: 5,
+              child: ListTile(
+                leading: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text("Minggu ${i + 1}",
+                        style: TextStyle(fontSize: 9, color: Colors.black)),
+                    Container(
+                      padding: EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        color: Colors.grey,
+                      ),
+                      child: Text(
+                        "${format.format(first)} ~ ${format.format(last)}",
+                        style: TextStyle(fontSize: 9, color: Colors.white),
+                      ),
                     ),
-                    title: FutureBuilder(
-                        future: debit(first, last),
-                        builder: (context, snapshot) {
-                          return Text("Rp. 0,00",
-                              style: TextStyle(color: Colors.green));
-                        }),
-                    trailing: FutureBuilder(
-                        future: null,
-                        builder: (context, snapshot) {
-                          return Text("Rp. 0,00",
-                              style: TextStyle(color: Colors.red));
-                        }),
-                  ),
-                )
-              : Text("");
+                  ],
+                ),
+                title: FutureBuilder(
+                    future: debit(first, last),
+                    builder: (context, snapshot) {
+                      var debit =
+                          snapshot.data == null ? 0 : snapshot.data[0]['debit'];
+                      return Text(rupiah(debit, trailing: ",00"),
+                          style: TextStyle(color: Colors.green));
+                    }),
+                trailing: FutureBuilder(
+                    future: kredit(first, last),
+                    builder: (context, snapshot) {
+                      var kredit = snapshot.data == null
+                          ? 0
+                          : snapshot.data[0]['kredit'];
+                      return Text(rupiah(kredit, trailing: ",00"),
+                          style: TextStyle(color: Colors.red));
+                    }),
+              ),
+            );
+          } else {
+            return Text("");
+          }
         },
       ),
     );
   }
 
-  Future<List<Map>> debit(DateTime first, DateTime last) async {
+  Future<List<Map>> debit(DateTime f, DateTime l) async {
     var db = DBHelper();
+    String ketentuan =
+        "WHERE detail.kode = 1 AND tanggal.time BETWEEN ${f.millisecondsSinceEpoch} AND ${l.millisecondsSinceEpoch}";
 
     List<Map> _data = await db.select(
-        "SELECT SUM(jumlah) FROM detail INNER JOIN tanggal ON tanggal.id_tanggal = detail.id_tanggal WHERE detail.id_user = ${widget.data.pin} AND detail.kode = 1 AND ");
-    print(_data);
-    return _data;
+        "SELECT SUM(jumlah) AS debit FROM detail INNER JOIN tanggal ON tanggal.id_tanggal = detail.id_tanggal " +
+            ketentuan);
+    return _data == null
+        ? [
+            {'debit': 0}
+          ]
+        : _data;
   }
 
-  Future<List<Map>> kredit() async {
+  Future<List<Map>> kredit(DateTime f, DateTime l) async {
     var db = DBHelper();
+    String ketentuan =
+        "WHERE detail.kode = 2 AND tanggal.time BETWEEN ${f.millisecondsSinceEpoch} AND ${l.millisecondsSinceEpoch}";
 
     List<Map> _data = await db.select(
-        "SELECT SUM(jumlah) AS kredit FROM detail WHERE id_user = ${widget.data.pin} AND kode = 2");
-    return _data;
+        "SELECT SUM(jumlah) AS kredit FROM detail INNER JOIN tanggal ON tanggal.id_tanggal = detail.id_tanggal " +
+            ketentuan);
+    return _data == null
+        ? [
+            {'kredit': 0}
+          ]
+        : _data;
   }
 }
