@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:indonesia/indonesia.dart';
 import 'package:keuangan/helper/DBHelper.dart';
 import 'package:keuangan/model/Users.dart';
+import './UpdateData.dart';
 
 class Harian extends StatefulWidget {
   final int bulanan;
@@ -122,8 +123,8 @@ class _HarianState extends State<Harian> {
               padding: EdgeInsets.only(bottom: 8.0),
               child: Divider(),
             ),
-            FutureBuilder(
-              future: this.fetchDetail(data['id_tanggal']),
+            StreamBuilder(
+              stream: this.fetchDetail(data['id_tanggal']).asStream(),
               builder: (ctx, snap) {
                 if (!snap.hasData) return Text("Data Tidak Ada");
                 return ListView.builder(
@@ -135,26 +136,35 @@ class _HarianState extends State<Harian> {
 
                     return Padding(
                       padding: EdgeInsets.only(
-                        bottom: 8.0,
+                        bottom: 10.0,
                         left: 10.0,
                         right: 10.0,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Text(data["kategori"]),
-                          Text(data["keterangan"], softWrap: true),
-                          Text(
-                            rupiah(data['jumlah'], trailing: ',00'),
-                            style: TextStyle(
-                              color: data['kode'] == 1
-                                  ? Colors.green
-                                  : data['kode'] == 2
-                                      ? Colors.red
-                                      : Colors.black,
+                      child: GestureDetector(
+                        onLongPress: () {
+                          hapus(context, snap.data, i);
+                        },
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    UpdateData(widget.data, data, tgl))),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Text(data["kategori"]),
+                            Text(data["keterangan"], softWrap: true),
+                            Text(
+                              rupiah(data['jumlah'], trailing: ',00'),
+                              style: TextStyle(
+                                color: data['kode'] == 1
+                                    ? Colors.green
+                                    : data['kode'] == 2
+                                        ? Colors.red
+                                        : Colors.black,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -206,5 +216,43 @@ class _HarianState extends State<Harian> {
         );
       },
     );
+  }
+
+  hapus(BuildContext context, List<Map> data, int i) {
+    return showDialog(
+      context: context,
+      child: AlertDialog(
+        title: Text(
+          "Apakah anda yakin ingin dihapus?",
+          textAlign: TextAlign.center,
+        ),
+        titleTextStyle: TextStyle(fontSize: 14, color: Colors.black),
+        actions: <Widget>[
+          FlatButton(
+            child: Text("Tidak",
+                style: TextStyle(
+                  color: Colors.red,
+                )),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          FlatButton(
+            child: Text("Ya",
+                style: TextStyle(
+                  color: Colors.green,
+                )),
+            onPressed: () => _hapus(data, i),
+          )
+        ],
+      ),
+    );
+  }
+
+  _hapus(List<Map> data, int i) async {
+    var db = DBHelper();
+    List<Map> _data = new List<Map>.from(data);
+    await db.hapus(_data[i]['id_detail']).then((int i) {
+      data.remove(i);
+      Navigator.of(context).pop();
+    });
   }
 }

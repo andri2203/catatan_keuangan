@@ -1,5 +1,6 @@
 import 'package:keuangan/helper/DBHelper.dart';
 import 'package:flutter/material.dart';
+import 'package:keuangan/model/SaveFile.dart';
 import 'package:keuangan/model/Users.dart';
 import 'package:keuangan/view/InputData.dart';
 import 'package:intl/intl.dart';
@@ -56,8 +57,8 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     List<Map> _data1 = await db.select(
         "SELECT SUM(jumlah) AS kredit FROM detail WHERE id_user = ${widget.user.pin} AND kode = 2");
 
-    int debit = _data == null ? 0 : _data[0]['debit'];
-    int kredit = _data1 == null ? 0 : _data1[0]['kredit'];
+    int debit = _data[0]['debit'] == null ? 0 : _data[0]['debit'];
+    int kredit = _data1[0]['kredit'] == null ? 0 : _data1[0]['kredit'];
     int saldo = debit - kredit;
     return [debit, kredit, saldo];
   }
@@ -194,68 +195,52 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
       child: StreamBuilder(
         stream: data().asStream(),
         builder: (ctx, snap) {
-          switch (snap.connectionState) {
-            case ConnectionState.none:
-            case ConnectionState.waiting:
-              return statusNull(context);
-              break;
-            default:
-              var debit = snap.data == null ? 0 : snap.data[0];
-              var kredit = snap.data == null ? 0 : snap.data[1];
-              var saldo = snap.data == null ? 0 : snap.data[2];
-              return new Material(
-                elevation: 5,
-                color: Colors.white,
-                child: ButtonBar(
-                  alignment: MainAxisAlignment.spaceAround,
-                  children: <Widget>[
-                    new FlatButton(
-                      child: Column(
-                        children: <Widget>[
-                          Text("Pemasukan",
-                              style: TextStyle(color: Colors.black)),
-                          SizedBox(height: 5.0),
-                          Text(
-                              rupiah(debit == null ? 0 : debit,
-                                  trailing: ',00'),
-                              style:
-                                  TextStyle(color: Colors.green, fontSize: 10))
-                        ],
-                      ),
-                      onPressed: () {},
-                    ),
-                    new FlatButton(
-                      child: Column(
-                        children: <Widget>[
-                          Text("Pengeluaran",
-                              style: TextStyle(color: Colors.black)),
-                          SizedBox(height: 5.0),
-                          Text(
-                              rupiah(kredit == null ? 0 : kredit,
-                                  trailing: ',00'),
-                              style: TextStyle(color: Colors.red, fontSize: 10))
-                        ],
-                      ),
-                      onPressed: () {},
-                    ),
-                    new FlatButton(
-                      child: Column(
-                        children: <Widget>[
-                          Text("Saldo", style: TextStyle(color: Colors.black)),
-                          SizedBox(height: 5.0),
-                          Text(
-                              rupiah(saldo == null ? 0 : saldo,
-                                  trailing: ',00'),
-                              style:
-                                  TextStyle(color: Colors.black, fontSize: 10)),
-                        ],
-                      ),
-                      onPressed: () {},
-                    ),
-                  ],
+          var debit = snap.data == null ? 0 : snap.data[0];
+          var kredit = snap.data == null ? 0 : snap.data[1];
+          var saldo = snap.data == null ? 0 : snap.data[2];
+          return new Material(
+            elevation: 5,
+            color: Colors.white,
+            child: ButtonBar(
+              alignment: MainAxisAlignment.spaceAround,
+              children: <Widget>[
+                new FlatButton(
+                  child: Column(
+                    children: <Widget>[
+                      Text("Pemasukan", style: TextStyle(color: Colors.black)),
+                      SizedBox(height: 5.0),
+                      Text(rupiah(debit == null ? 0 : debit, trailing: ',00'),
+                          style: TextStyle(color: Colors.green, fontSize: 10))
+                    ],
+                  ),
+                  onPressed: () {},
                 ),
-              );
-          }
+                new FlatButton(
+                  child: Column(
+                    children: <Widget>[
+                      Text("Pengeluaran",
+                          style: TextStyle(color: Colors.black)),
+                      SizedBox(height: 5.0),
+                      Text(rupiah(kredit == null ? 0 : kredit, trailing: ',00'),
+                          style: TextStyle(color: Colors.red, fontSize: 10))
+                    ],
+                  ),
+                  onPressed: () {},
+                ),
+                new FlatButton(
+                  child: Column(
+                    children: <Widget>[
+                      Text("Saldo", style: TextStyle(color: Colors.black)),
+                      SizedBox(height: 5.0),
+                      Text(rupiah(saldo == null ? 0 : saldo, trailing: ',00'),
+                          style: TextStyle(color: Colors.black, fontSize: 10)),
+                    ],
+                  ),
+                  onPressed: () {},
+                ),
+              ],
+            ),
+          );
         },
       ),
     );
@@ -276,6 +261,34 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
             ),
             accountName: Text(widget.user.nama),
             accountEmail: Text(format.format(date.toLocal())),
+          ),
+          ListTile(
+            leading: Icon(Icons.picture_as_pdf),
+            title: Text("Ekspor PDF"),
+            trailing: Icon(Icons.arrow_forward),
+            onTap: () {
+              showDialog(
+                child: SaveFile(user: widget.user, isPDF: true, isCSV: false),
+                context: context,
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.attach_file),
+            title: Text("Ekspor Excel"),
+            trailing: Icon(Icons.arrow_forward),
+            onTap: () {
+              showDialog(
+                child: SaveFile(user: widget.user, isCSV: true, isPDF: false),
+                context: context,
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.exit_to_app),
+            title: Text("Keluar"),
+            trailing: Icon(Icons.arrow_forward),
+            onTap: () => Navigator.of(context).popAndPushNamed('/'),
           ),
         ],
       ),

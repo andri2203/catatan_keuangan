@@ -55,6 +55,26 @@ class DBHelper {
     return res;
   }
 
+  Future<int> updateDetail(Detail detail, int idDetail) async {
+    var dbClient = await db;
+
+    int res = await dbClient.update("detail", detail.toMap(),
+        where: "id_detail = $idDetail");
+    print("Detail Updated");
+    return res;
+  }
+
+  Future<int> hapus(int idDetail) async {
+    var dbClient = await db;
+
+    int res = await dbClient
+        .rawDelete("DELETE FROM detail WHERE id_detail = $idDetail");
+
+    print("Detail Delated");
+
+    return res;
+  }
+
   Future<int> saveDetail(Detail detail) async {
     var dbClient = await db;
 
